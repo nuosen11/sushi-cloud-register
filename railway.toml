@@ -1,0 +1,7 @@
+[build.builder]
+name = "python"
+
+[deploy]
+region = "singapore"
+startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT"
+healthCheckPath = "/health"
