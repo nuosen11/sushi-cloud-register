@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>洋葱云自动注册工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 24px; }
+        .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .btn-group { display: flex; gap: 12px; margin-bottom: 16px; }
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #27ae60; color: white; }
+        .btn-secondary { background: #8e44ad; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+        .result {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result-label { font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 14px; }
+        .email-display {
+            background: #e8f5e9;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #27ae60;
+        }
+        .sub-link {
+            background: #fff3cd;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            word-break: break-all;
+            font-size: 13px;
+            color: #856404;
+        }
+        .copy-btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .loading { text-align: center; padding: 20px; color: #666; }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #27ae60;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .history-item {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .history-email { font-weight: 600; color: #2c3e50; margin-bottom: 6px; }
+        .history-sub {
+            font-size: 12px;
+            color: #856404;
+            background: #fff3cd;
+            padding: 6px 10px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+        .footer { text-align: center; color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧅 洋葱云自动注册</h1>
+            <p>By 诺森 | 寿司云账号生成器</p>
+        </div>
+
+        <div class="card">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="registerSingle()" id="btn-single">🚀 单个注册</button>
+                <button class="btn btn-secondary" onclick="registerBatch()" id="btn-batch">🚀 批量 10 个</button>
+            </div>
+            <div id="result-area" style="display:none;">
+                <div class="result-label">📊 执行结果：</div>
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在注册中，请稍候...</p>
+                </div>
+                <div id="result-content" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="card" id="history-card" style="display:none;">
+            <div class="result-label">📋 历史记录：</div>
+            <div id="history-list"></div>
+        </div>
+
+        <div class="footer">洋葱云自动注册工具 v1.0 · By 诺森</div>
+    </div>
+
+    <script>
+        let history = JSON.parse(localStorage.getItem('sushi_history') || '[]');
+        renderHistory();
+
+        function showLoading() {
+            document.getElementById('result-area').style.display = 'block';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-content').style.display = 'none';
+            document.getElementById('btn-single').disabled = true;
+            document.getElementById('btn-batch').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('result-content').style.display = 'block';
+            document.getElementById('btn-single').disabled = false;
+            document.getElementById('btn-batch').disabled = false;
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板！'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已复制！');
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#27ae60;color:white;padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;animation:fadeIn 0.3s';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        function registerSingle() {
+            showLoading();
+            fetch('/api/register', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    hideLoading();
+                    const c = document.getElementById('result-content');
+                    if (data.success) {
+                        c.innerHTML = `
+                            <div class="email-display">📧 邮箱: ${data.email}</div>
+                            <div style="margin-bottom:8px;">🔑 密码: ${data.password}</div>
+                            <div class="sub-link">🔗 订阅链接:<br>${data.subscribe_url}</div>
+                            <button class="copy-btn" onclick="copyToClipboard('${data.subscribe_url}')">📋 复制订阅链接</button>
+                            <div style="margin-top:12px;font-size:11px;color:#888;">vmess 内容: ${data.vmess_length} 字节</div>
+                        `;
+                        addToHistory(data.email, data.subscribe_url);
+                    } else {
+                        c.innerHTML = `<div style="color:#e74c3c;">❌ 失败: ${data.error}</div>`;
+                    }
+                })
+                .catch(err => {
+                    hideLoading();
+                    document.getElementById('result-content').innerHTML = `<div style="color:#e74c3c;">请求失败: ${err}</div>`;
+                });
+        }
+
+        function registerBatch() {
+            showLoading();
+            fetch('/api/batch', {method: 'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    hideLoading();
+                    const c = document.getElementById('result-content');
+                    if (!data.success) {
+                        c.innerHTML = `<div style="color:#e74c3c;">❌ 失败: ${data.error}</div>`;
+                        return;
+                    }
+                    let html = `<div style="font-weight:600;margin-bottom:12px;">✅ 成功 ${data.success_count} / ${data.total} 个</div>`;
+                    data.accounts.forEach((acc, i) => {
+                        html += `
+                            <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #eee;">
+                                <div style="font-weight:500;">${i+1}. ${acc.email}</div>
+                                <div style="font-size:12px;color:#666;margin:4px 0;">密码: ${acc.password}</div>
+                                <div class="sub-link" style="font-size:11px;">${acc.subscribe_url}</div>
+                                <button class="copy-btn" style="font-size:12px;padding:6px 12px;" onclick="copyToClipboard('${acc.subscribe_url}')">复制</button>
+                            </div>
+                        `;
+                        addToHistory(acc.email, acc.subscribe_url);
+                    });
+                    c.innerHTML = html;
+                })
+                .catch(err => {
+                    hideLoading();
+                    document.getElementById('result-content').innerHTML = `<div style="color:#e74c3c;">请求失败: ${err}</div>`;
+                });
+        }
+
+        function addToHistory(email, subUrl) {
+            history.unshift({email, subUrl, time: new Date().toLocaleString()});
+            if (history.length > 20) history.pop();
+            localStorage.setItem('sushi_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                document.getElementById('history-card').style.display = 'none';
+                return;
+            }
+            document.getElementById('history-card').style.display = 'block';
+            document.getElementById('history-list').innerHTML = history.map(h => `
+                <div class="history-item">
+                    <div class="history-email">${h.email}</div>
+                    <div class="history-sub">${h.subUrl}</div>
+                    <div style="font-size:11px;color:#999;margin-top:4px;">${h.time}</div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
